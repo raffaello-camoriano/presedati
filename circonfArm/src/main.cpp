@@ -24,19 +24,18 @@
 #define PRINT_STATUS_PER    1.0     // [s]
 #define MAX_TORSO_PITCH     30.0    // [deg]
 
-YARP_DECLARE_DEVICES(icubmod)
-
 using namespace yarp::os;
 using namespace yarp::dev;
 using namespace yarp::sig;
 using namespace yarp::math;
 
 
-class CtrlThread: public RateThread
+class CtrlThread: public RateThread,
+                  public CartesianEvent
 {
 protected:
     PolyDriver         client;
-    ICartesianControl *arm;
+    ICartesianControl *icart;
 
     Vector xd;
     Vector od;
@@ -47,8 +46,20 @@ protected:
     double t0;
     double t1;
 
+    // the event callback attached to the "motion-ongoing"
+    virtual void cartesianEventCallback()
+    {
+        fprintf(stdout,"20%% of trajectory attained\n");
+    }
+
 public:
-    CtrlThread(const double period) : RateThread(int(period*1000.0)) { }
+    CtrlThread(const double period) : RateThread(int(period*1000.0))
+    {
+        // we wanna raise an event each time the arm is at 20%
+        // of the trajectory (or 70% far from the target)
+        cartesianEventParameters.type="motion-ongoing";
+        cartesianEventParameters.motionOngoingCheckPoint=0.2;
+    }
 
     virtual bool threadInit()
     {
@@ -72,33 +83,37 @@ public:
             return false;
 
         // open the view
-        client.view(arm);
+        client.view(icart);
 
         // latch the controller context in order to preserve
         // it after closing the module
         // the context contains the dofs status, the tracking mode,
         // the resting positions, the limits and so on.
-        arm->storeContext(&startup_context_id);
+        icart->storeContext(&startup_context_id);
 
         // set trajectory time
-        arm->setTrajTime(1.0);
+        icart->setTrajTime(1.0);
 
         // get the torso dofs
         Vector newDof, curDof;
-        arm->getDOF(curDof);
+        icart->getDOF(curDof);
         newDof=curDof;
 
-        // enable the torso yaw and pitch
-        // disable the torso roll
-        newDof[0]=1;
+        // Disable torso DoFs
+        newDof[0]=0;
         newDof[1]=0;
-        newDof[2]=1;
-
-        // impose some restriction on the torso pitch
-        limitTorsoPitch();
+        newDof[2]=0;
 
         // send the request for dofs reconfiguration
-        arm->setDOF(newDof,curDof);
+        icart->setDOF(newDof,curDof);
+
+        // print out some info about the controller
+        Bottle info;
+        icart->getInfo(info);
+        fprintf(stdout,"info = %s\n",info.toString().c_str());
+
+        // register the event, attaching the callback
+        icart->registerEvent(*this);
 
         xd.resize(3);
         od.resize(4);
@@ -124,7 +139,7 @@ public:
 
         // go to the target :)
         // (in streaming)
-        arm->goToPose(xd,od);
+        icart->goToPose(xd,od);
 
         // some verbosity
         printStatus();
@@ -134,11 +149,11 @@ public:
     {    
         // we require an immediate stop
         // before closing the client for safety reason
-        arm->stopControl();
+        icart->stopControl();
 
         // it's a good rule to restore the controller
         // context as it was before opening the module
-        arm->restoreContext(startup_context_id);
+        icart->restoreContext(startup_context_id);
 
         client.close();
     }
@@ -159,26 +174,6 @@ public:
         od[0]=0.0; od[1]=0.0; od[2]=1.0; od[3]=M_PI;
     }
 
-    double norm(const Vector &v)
-    {
-        return sqrt(dot(v,v));
-    }
-
-    void limitTorsoPitch()
-    {
-        int axis=0; // pitch joint
-        double min, max;
-
-        // sometimes it may be helpful to reduce
-        // the range of variability of the joints;
-        // for example here we don't want the torso
-        // to lean out more than 30 degrees forward
-
-        // we keep the lower limit
-        arm->getLimits(axis,&min,&max);
-        arm->setLimits(axis,min,MAX_TORSO_PITCH);
-    }
-
     void printStatus()
     {        
         if (t-t1>=PRINT_STATUS_PER)
@@ -187,12 +182,12 @@ public:
 
             // we get the current arm pose in the
             // operational space
-            arm->getPose(x,o);
+            icart->getPose(x,o);
 
             // we get the final destination of the arm
             // as found by the solver: it differs a bit
             // from the desired pose according to the tolerances
-            arm->getDesired(xdhat,odhat,qdhat);
+            icart->getDesired(xdhat,odhat,qdhat);
 
             double e_x=norm(xdhat-x);
             double e_o=norm(odhat-o);
@@ -251,12 +246,12 @@ public:
 
 int main()
 {   
-    // we need to initialize the drivers list 
-    YARP_REGISTER_DEVICES(icubmod)
-
     Network yarp;
     if (!yarp.checkNetwork())
+    {
+        fprintf(stdout,"Error: yarp server does not seem available\n");
         return -1;
+    }
 
     CtrlModule mod;
 

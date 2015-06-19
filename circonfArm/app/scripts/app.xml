@@ -1,13 +1,13 @@
 <application>
 
-  <name>Cartesian Interface Tutorial</name>
+  <name>circonfArm</name>
 
   <dependencies>
       <port>/icubSim/cartesianController/left_arm/state:o</port>
   </dependencies>
 
   <module>
-      <name>cartesian-interface</name>
+      <name>circonfArm</name>
       <node>localhost</node>
       <stdio>localhost</stdio>
       <tag>client</tag>

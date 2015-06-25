@@ -175,30 +175,10 @@ public:
       
         // translational target part: a circular trajectory
       
-// 	if (m/*ode == 0)
-// 	{*/
-	  
-	//Mode: 0: XY; 1: YZ; 2: ZX
-      
-	xd[mode % 3] = center[mode % 3]+radius*sin(2.0*M_PI*frequency*(t-t0));
-	xd[mode+1 % 3] = center[mode+1 % 3]+radius*cos(2.0*M_PI*frequency*(t-t0));
-	xd[mode+2 % 3] = center[mode+2 % 3];
-	
-// 	}
-// 	else if (mode == 1)
-// 	{
-// 	  // YZ plane
-// 	  xd[0]=center[0];
-// 	  xd[1]=center[1]+radius*cos(2.0*M_PI*frequency*(t-t0));
-// 	  xd[2]=center[2]+radius*sin(2.0*M_PI*frequency*(t-t0));            
-// 	}
-// 	else if (mode == 2)
-// 	{
-// 	  // XZ plane
-// 	  xd[0]=center[0]+radius*cos(2.0*M_PI*frequency*(t-t0));
-// 	  xd[1]=center[1];
-// 	  xd[2]=center[2]+radius*sin(2.0*M_PI*frequency*(t-t0));            
-// 	}
+        //Mode: 0: XY; 1: YZ; 2: ZX
+        xd[mode % 3] = center[mode % 3]+radius*sin(2.0*M_PI*frequency*(t-t0));
+        xd[mode+1 % 3] = center[mode+1 % 3]+radius*cos(2.0*M_PI*frequency*(t-t0));
+        xd[mode+2 % 3] = center[mode+2 % 3];
 
     
         // we keep the orientation of the left arm constant:

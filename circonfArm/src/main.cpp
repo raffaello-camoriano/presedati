@@ -3,7 +3,8 @@
 // A tutorial on how to use the Cartesian Interface to control a limb
 // in the operational space.
 //
-// Author: Ugo Pattacini - <ugo.pattacini@iit.it>
+// Author: Raffaello Camoriano - <raffaello.camoriano@iit.it>
+// Based on the example module by Ugo Pattacini - <ugo.pattacini@iit.it>
 
 #include <yarp/os/Network.h>
 #include <yarp/os/RFModule.h>
@@ -36,6 +37,11 @@ class CtrlThread: public RateThread,
 protected:
     PolyDriver         client;
     ICartesianControl *icart;
+    
+    int mode;           // Mode: 1: XY; 2: XZ; 3: YZ (plane of the circumference)
+    Vector center;      // Center of the circumference
+    double radius;      // Radius of the circumference
+    double frequency;   // Frequency of the movement
 
     Vector xd;
     Vector od;
@@ -53,8 +59,14 @@ protected:
     }
 
 public:
-    CtrlThread(const double period) : RateThread(int(period*1000.0))
+    CtrlThread(const double period , const Vector center_ ,const double radius_ , const double frequency_ , const int mode_) : RateThread(int(period*1000.0))
     {
+        // Set thread parameters
+        mode = mode_;
+        center = center_;
+        radius = radius_;
+        frequency = frequency_;
+        
         // we wanna raise an event each time the arm is at 20%
         // of the trajectory (or 70% far from the target)
         cartesianEventParameters.type="motion-ongoing";
@@ -161,12 +173,12 @@ public:
     void generateTarget()
     {   
         // translational target part: a circular trajectory
-        // in the yz plane centered in [-0.3,-0.1,0.1] with radius=0.1 m
-        // and frequency 0.1 Hz
-        xd[0]=-0.3;
-        xd[1]=-0.1+0.1*cos(2.0*M_PI*0.1*(t-t0));
-        xd[2]=+0.1+0.1*sin(2.0*M_PI*0.1*(t-t0));            
-                 
+        // in the yz plane centered in [-0.3,-0.5,0.5] with radius=0.01 m
+        // and frequency 2 Hz
+        xd[0]=center[0];
+        xd[1]=center[1]+radius*cos(2.0*M_PI*frequency*(t-t0));
+        xd[2]=center[2]+radius*sin(2.0*M_PI*frequency*(t-t0));            
+        
         // we keep the orientation of the left arm constant:
         // we want the middle finger to point forward (end-effector x-axis)
         // with the palm turned down (end-effector y-axis points leftward);
@@ -220,7 +232,17 @@ public:
     {
         Time::turboBoost();
 
-        thr=new CtrlThread(CTRL_THREAD_PER);
+        // Get parameters from conf file
+        Vector center_;
+        center_.resize(3);
+        center_[0] = rf.find("ctr_x").asDouble();
+        center_[1] = rf.find("ctr_y").asDouble();
+        center_[2] = rf.find("ctr_z").asDouble();
+        const double radius_ = rf.find("radius").asDouble();
+        const double frequency_ = rf.find("frequency").asDouble();
+        const int mode_ = rf.find("mode").asInt();
+        
+        thr=new CtrlThread(CTRL_THREAD_PER , center_ ,radius_ , frequency_ , mode_);
         if (!thr->start())
         {
             delete thr;
@@ -244,7 +266,7 @@ public:
 
 
 
-int main()
+int main(int argc, char *argv[])
 {   
     Network yarp;
     if (!yarp.checkNetwork())
@@ -256,6 +278,12 @@ int main()
     CtrlModule mod;
 
     ResourceFinder rf;
+    
+    rf.setVerbose(true);
+    rf.setDefaultConfigFile("circonfArm_config.ini");
+    rf.setDefaultContext("circonfArm");
+    rf.setDefault("name","circonfArm");
+    rf.configure(argc,argv);
     return mod.runModule(rf);
 }
 

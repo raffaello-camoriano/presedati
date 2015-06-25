@@ -1,9 +1,9 @@
 <application>
 
-  <name>circonfArm</name>
+  <name>circonfArm_icubsim</name>
 
-  <dependencies>
-      <port>/icub/cartesianController/right_arm/state:o</port>
+  <dependencies>    
+      <port>/icubSim/cartesianController/right_arm/state:o</port>
   </dependencies>
 
   <module>

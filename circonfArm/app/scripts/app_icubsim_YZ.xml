@@ -1,9 +1,9 @@
 <application>
 
-  <name>circonfArm</name>
+  <name>circonfArm_icubsim_YZ</name>
 
-  <dependencies>
-      <port>/icub/cartesianController/right_arm/state:o</port>
+  <dependencies>    
+      <port>/icubSim/cartesianController/right_arm/state:o</port>
   </dependencies>
 
   <module>
@@ -11,6 +11,7 @@
       <node>localhost</node>
       <stdio>localhost</stdio>
       <tag>client</tag>
+      <parameters>--from circonfArm_config_YZ.ini</parameters>
   </module>
 
 </application>

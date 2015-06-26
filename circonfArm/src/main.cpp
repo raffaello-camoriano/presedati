@@ -152,6 +152,13 @@ public:
         icart->registerEvent(*this);
 
         xd.resize(3);
+        
+
+        // Sent go to center command and wait for motion to be done
+        fprintf(stdout,"Go to center:\n");
+        icart->goToPositionSync(center);
+        icart->waitMotionDone(0.1);        
+        fprintf(stdout,"Done.\n");
 
         return true;
     }
@@ -182,6 +189,13 @@ public:
 
     virtual void threadRelease()
     {    
+
+        // Sent go to center command and wait for motion to be done
+        fprintf(stdout,"Go to center:\n");
+        icart->goToPositionSync(center);
+        icart->waitMotionDone(0.1);
+        fprintf(stdout,"Done.\n");
+        
         // we require an immediate stop
         // before closing the client for safety reason
         icart->stopControl();
@@ -195,7 +209,6 @@ public:
 
     void generateTarget()
     {   
-      
         // translational target part: a circular trajectory
       
         //Mode: 0: XY; 1: YZ; 2: ZX
@@ -203,25 +216,25 @@ public:
         xd[(mode+1) % 3] = center[(mode+1) % 3]+radius*cos(2.0*M_PI*frequency*(t-t0));
         xd[(mode+2) % 3] = center[(mode+2) % 3];
         
-        printf("center[%d]:\n",mode % 3);
-        printf("%g\n",center[mode % 3]);
-        printf("center[%d]:\n",(mode + 1) % 3);
-        printf("%g\n",center[(mode + 1) % 3]);
-        printf("center[%d]:\n",(mode + 2) % 3);
-        printf("%g\n\n",center[(mode + 2) % 3]);
-        
-        printf("xd[%d]:\n",mode % 3);
-        printf("%g\n",xd[mode % 3]);
-        printf("xd[%d]:\n",(mode + 1) % 3);
-        printf("%g\n",xd[(mode + 1) % 3]);
-        printf("xd[%d]:\n",(mode + 2) % 3);
-        printf("%g\n\n",xd[(mode + 2) % 3]);
-        
-        printf("Center:\n");
-        printf("%s\n\n",center.toString().c_str());
-        
-        printf("Generated trajectory:\n");
-        printf("%s\n\n",xd.toString().c_str());
+//         printf("center[%d]:\n",mode % 3);
+//         printf("%g\n",center[mode % 3]);
+//         printf("center[%d]:\n",(mode + 1) % 3);
+//         printf("%g\n",center[(mode + 1) % 3]);
+//         printf("center[%d]:\n",(mode + 2) % 3);
+//         printf("%g\n\n",center[(mode + 2) % 3]);
+//         
+//         printf("xd[%d]:\n",mode % 3);
+//         printf("%g\n",xd[mode % 3]);
+//         printf("xd[%d]:\n",(mode + 1) % 3);
+//         printf("%g\n",xd[(mode + 1) % 3]);
+//         printf("xd[%d]:\n",(mode + 2) % 3);
+//         printf("%g\n\n",xd[(mode + 2) % 3]);
+//         
+//         printf("Center:\n");
+//         printf("%s\n\n",center.toString().c_str());
+//         
+//         printf("Generated trajectory:\n");
+//         printf("%s\n\n",xd.toString().c_str());
 
     }
 

@@ -45,8 +45,8 @@
         <protocol>tcp</protocol>
     </connection>    
     <connection persist="true">
-        <from>/icub/left_arm/state:o</from>
-        <to>/iCubGui/left_arm:i</to>
+        <from>/icub/right_arm/state:o</from>
+        <to>/iCubGui/right_arm:i</to>
         <protocol>tcp</protocol>
         <geometry></geometry>
     </connection>

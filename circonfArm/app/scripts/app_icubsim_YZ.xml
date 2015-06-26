@@ -11,7 +11,7 @@
       <node>localhost</node>
       <stdio>localhost</stdio>
       <tag>client</tag>
-      <parameters>--from circonfArm_config_YZ.ini</parameters>
+        <parameters>--robot icubSim --arm right --mode 1</parameters>
   </module>
 
 </application>

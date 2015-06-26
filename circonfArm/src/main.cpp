@@ -6,6 +6,8 @@
 // Author: Raffaello Camoriano - <raffaello.camoriano@iit.it>
 // Based on the example module by Ugo Pattacini - <ugo.pattacini@iit.it>
 
+#include <string>
+
 #include <yarp/os/Network.h>
 #include <yarp/os/RFModule.h>
 #include <yarp/os/RateThread.h>
@@ -25,6 +27,7 @@
 #define PRINT_STATUS_PER    1.0     // [s]
 #define MAX_TORSO_PITCH     30.0    // [deg]
 
+using namespace std;
 using namespace yarp::os;
 using namespace yarp::dev;
 using namespace yarp::sig;
@@ -38,13 +41,14 @@ protected:
     PolyDriver         client;
     ICartesianControl *icart;
     
+    string robot;
+    string arm;
     int mode;           // Mode: 1: XY; 2: XZ; 3: YZ (plane of the circumference)
     Vector center;      // Center of the circumference
     double radius;      // Radius of the circumference
     double frequency;   // Frequency of the movement
 
     Vector xd;
-    Vector od;
 
     int startup_context_id;
 
@@ -59,8 +63,18 @@ protected:
     }
 
 public:
-    CtrlThread(const double period , const Vector center_ ,const double radius_ , const double frequency_ , const int mode_) : RateThread(int(period*1000.0))
+    CtrlThread(const string robot_, 
+               const string arm_, 
+               const double period , 
+               const Vector center_ , 
+               const double radius_ , 
+               const double frequency_ , 
+               const int mode_) : RateThread(int(period*1000.0))
     {
+        // Set robot and arm side
+        robot = robot_;
+        arm = arm_;
+        
         // Set thread parameters
         mode = mode_;
         center = center_;
@@ -87,9 +101,11 @@ public:
         // 3 - the cartesian solver for the left arm is running too
         //     (launch iKinCartesianSolver --context simCartesianControl --part left_arm)
         //
+        
+        string fwslash = "/";
         Property option("(device cartesiancontrollerclient)");
-        option.put("remote","/icubSim/cartesianController/left_arm");
-        option.put("local","/cartesian_client/left_arm");
+        option.put("remote",(fwslash+robot+"/cartesianController/"+arm+"_arm").c_str());
+        option.put("local",(fwslash+"cartesian_client/"+arm+"_arm").c_str());
 
         if (!client.open(option))
             return false;
@@ -110,11 +126,19 @@ public:
         Vector newDof, curDof;
         icart->getDOF(curDof);
         newDof=curDof;
-
+        
         // Disable torso DoFs
         newDof[0]=0;
         newDof[1]=0;
         newDof[2]=0;
+
+        // Disable wrist DoFs
+        newDof[7]=0;
+        newDof[8]=0;
+        newDof[9]=0;
+
+        fprintf(stdout,"Configured DoFs activation:\n");
+        fprintf(stdout,"%s\n",curDof.toString().c_str());
 
         // send the request for dofs reconfiguration
         icart->setDOF(newDof,curDof);
@@ -128,7 +152,6 @@ public:
         icart->registerEvent(*this);
 
         xd.resize(3);
-        od.resize(4);
 
         return true;
     }
@@ -151,7 +174,7 @@ public:
 
         // go to the target :)
         // (in streaming)
-        icart->goToPose(xd,od);
+        icart->goToPosition(xd);
 
         // some verbosity
         printStatus();
@@ -177,45 +200,51 @@ public:
       
         //Mode: 0: XY; 1: YZ; 2: ZX
         xd[mode % 3] = center[mode % 3]+radius*sin(2.0*M_PI*frequency*(t-t0));
-        xd[mode+1 % 3] = center[mode+1 % 3]+radius*cos(2.0*M_PI*frequency*(t-t0));
-        xd[mode+2 % 3] = center[mode+2 % 3];
+        xd[(mode+1) % 3] = center[(mode+1) % 3]+radius*cos(2.0*M_PI*frequency*(t-t0));
+        xd[(mode+2) % 3] = center[(mode+2) % 3];
+        
+        printf("center[%d]:\n",mode % 3);
+        printf("%g\n",center[mode % 3]);
+        printf("center[%d]:\n",(mode + 1) % 3);
+        printf("%g\n",center[(mode + 1) % 3]);
+        printf("center[%d]:\n",(mode + 2) % 3);
+        printf("%g\n\n",center[(mode + 2) % 3]);
+        
+        printf("xd[%d]:\n",mode % 3);
+        printf("%g\n",xd[mode % 3]);
+        printf("xd[%d]:\n",(mode + 1) % 3);
+        printf("%g\n",xd[(mode + 1) % 3]);
+        printf("xd[%d]:\n",(mode + 2) % 3);
+        printf("%g\n\n",xd[(mode + 2) % 3]);
+        
+        printf("Center:\n");
+        printf("%s\n\n",center.toString().c_str());
+        
+        printf("Generated trajectory:\n");
+        printf("%s\n\n",xd.toString().c_str());
 
-    
-        // we keep the orientation of the left arm constant:
-        // we want the middle finger to point forward (end-effector x-axis)
-        // with the palm turned down (end-effector y-axis points leftward);
-        // to achieve that it is enough to rotate the root frame of pi around z-axis
-        od[0]=0.0; od[1]=0.0; od[2]=1.0; od[3]=M_PI;
     }
 
     void printStatus()
     {        
         if (t-t1>=PRINT_STATUS_PER)
         {
-            Vector x,o,xdhat,odhat,qdhat;
-
-            // we get the current arm pose in the
-            // operational space
-            icart->getPose(x,o);
-
-            // we get the final destination of the arm
-            // as found by the solver: it differs a bit
-            // from the desired pose according to the tolerances
-            icart->getDesired(xdhat,odhat,qdhat);
-
-            double e_x=norm(xdhat-x);
-            double e_o=norm(odhat-o);
-
-            fprintf(stdout,"+++++++++\n");
-            fprintf(stdout,"xd          [m] = %s\n",xd.toString().c_str());
-            fprintf(stdout,"xdhat       [m] = %s\n",xdhat.toString().c_str());
-            fprintf(stdout,"x           [m] = %s\n",x.toString().c_str());
-            fprintf(stdout,"od        [rad] = %s\n",od.toString().c_str());
-            fprintf(stdout,"odhat     [rad] = %s\n",odhat.toString().c_str());
-            fprintf(stdout,"o         [rad] = %s\n",o.toString().c_str());
-            fprintf(stdout,"norm(e_x)   [m] = %g\n",e_x);
-            fprintf(stdout,"norm(e_o) [rad] = %g\n",e_o);
-            fprintf(stdout,"---------\n\n");
+//             Vector x,xdhat,odhat,qdhat;
+// 
+// 
+//             // we get the final destination of the arm
+//             // as found by the solver: it differs a bit
+//             // from the desired pose according to the tolerances
+//             icart->getDesired(xdhat,odhat,qdhat);
+// 
+//             double e_x=norm(xdhat-x);
+// 
+//             fprintf(stdout,"+++++++++\n");
+//             fprintf(stdout,"xd          [m] = %s\n",xd.toString().c_str());
+//             fprintf(stdout,"xdhat       [m] = %s\n",xdhat.toString().c_str());
+//             fprintf(stdout,"x           [m] = %s\n",x.toString().c_str());
+//             fprintf(stdout,"norm(e_x)   [m] = %g\n",e_x);
+//             fprintf(stdout,"---------\n\n");
 
             t1=t;
         }
@@ -235,6 +264,9 @@ public:
         Time::turboBoost();
 
         // Get parameters from conf file
+        
+        string robot_=rf.find("robot").asString().c_str();       
+        string arm_=rf.find("arm").asString().c_str();
         Vector center_;
         center_.resize(3);
         center_[0] = rf.find("ctr_x").asDouble();
@@ -244,7 +276,7 @@ public:
         const double frequency_ = rf.find("frequency").asDouble();
         const int mode_ = rf.find("mode").asInt();
         
-        thr=new CtrlThread(CTRL_THREAD_PER , center_ ,radius_ , frequency_ , mode_);
+        thr=new CtrlThread(robot_ , arm_ , CTRL_THREAD_PER , center_ ,radius_ , frequency_ , mode_);
         if (!thr->start())
         {
             delete thr;
@@ -285,6 +317,8 @@ int main(int argc, char *argv[])
     rf.setDefaultConfigFile("circonfArm_config.ini");
     rf.setDefaultContext("circonfArm");
     rf.setDefault("name","circonfArm");
+    rf.setDefault("arm","right");
+    rf.setDefault("robot","icubSim");
     rf.configure(argc,argv);
     return mod.runModule(rf);
 }

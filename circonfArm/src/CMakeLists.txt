@@ -32,7 +32,7 @@ PROJECT(${PROJECTNAME})
 # find_package(YARP)
 # find_package(ICUB)
 
-file(GLOB source main.cpp)
+file(GLOB source main.cpp syncEst.cpp)
 #file(GLOB header include/*.h)
 
 source_group("Source Files" FILES ${source})
@@ -40,12 +40,15 @@ source_group("Source Files" FILES ${source})
 
 include_directories(${YARP_INCLUDE_DIRS} ${ICUB_INCLUDE_DIRS})
 
-add_executable(${PROJECTNAME} ${source})
-target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES})
-target_link_libraries(${PROJECTNAME} ${Gurls_LIBRARIES})
+add_executable(${PROJECTNAME} main.cpp)
+add_executable(syncEst syncEst.cpp)
+target_link_libraries(${PROJECTNAME}  ${YARP_LIBRARIES})
+target_link_libraries(syncEst  ${YARP_LIBRARIES}
+                               ctrlLib)
+# target_link_libraries(${PROJECTNAME} ${Gurls_LIBRARIES})
 
 # install(TARGETS ${PROJECTNAME} RUNTIME DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
-install(TARGETS ${PROJECTNAME} DESTINATION bin)
+install(TARGETS ${PROJECTNAME} syncEst DESTINATION bin)
 
 ##Debug: Print out all variables
 # get_cmake_property(_variableNames VARIABLES)

@@ -1,0 +1,61 @@
+<application>
+
+  <name>circonfArm</name>
+
+  <dependencies>
+      <port>/icub/cartesianController/right_arm/state:o</port>
+  </dependencies>
+
+    <module>
+        <name>circonfArm</name>
+        <node>localhost</node>
+        <stdio>localhost</stdio>
+        <tag>client</tag>
+    </module>  
+    <module>
+        <name>Synchronizer</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 328) (y 118.9))</geometry>
+    </module>
+    <module>
+        <name>iCubGui</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>       
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /log</parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>       
+    
+    <connection>
+        <from external="true">/icub/right_arm/state:o</from>
+        <to>/Synchronizer/pos:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.circonfArm+file.signalsMask</protocol>
+    </connection>
+    <connection>
+        <from external="true">/icub/right_arm/analog:o</from>
+        <to>/Synchronizer/ft:i</to>
+        <protocol>tcp</protocol>
+    </connection>    
+    <connection persist="true">
+        <from>/icub/left_arm/state:o</from>
+        <to>/iCubGui/left_arm:i</to>
+        <protocol>tcp</protocol>
+        <geometry></geometry>
+    </connection>
+    <connection persist="true">
+        <from>/Synchronizer/vec:o</from>
+        <to>/log</to>
+        <protocol>tcp</protocol>
+        <geometry></geometry>
+    </connection>  
+</application>
+
+

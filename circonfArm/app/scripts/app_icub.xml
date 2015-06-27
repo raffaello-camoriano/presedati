@@ -13,7 +13,7 @@
         <tag>client</tag>
     </module>  
     <module>
-        <name>Synchronizer</name>
+        <name>syncEst</name>
         <parameters></parameters>
         <node>localhost</node>
         <prefix></prefix>
@@ -36,12 +36,12 @@
     
     <connection>
         <from external="true">/icub/right_arm/state:o</from>
-        <to>/Synchronizer/pos:i</to>
+        <to>/syncEst/pos:i</to>
         <protocol>tcp+recv.portmonitor+script.lua+context.circonfArm+file.signalsMask</protocol>
     </connection>
     <connection>
         <from external="true">/icub/right_arm/analog:o</from>
-        <to>/Synchronizer/ft:i</to>
+        <to>/syncEst/ft:i</to>
         <protocol>tcp</protocol>
     </connection>    
     <connection persist="true">
@@ -51,7 +51,7 @@
         <geometry></geometry>
     </connection>
     <connection persist="true">
-        <from>/Synchronizer/vec:o</from>
+        <from>/syncEst/vec:o</from>
         <to>/log</to>
         <protocol>tcp</protocol>
         <geometry></geometry>

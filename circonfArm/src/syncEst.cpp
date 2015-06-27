@@ -103,7 +103,7 @@ public:
     }
 };
 
-class Synchronizer: public RFModule
+class syncEst: public RFModule
 {
 private:
 
@@ -125,7 +125,7 @@ public:
         // request high resolution scheduling
         Time::turboBoost();
 
-        string portName=rf.check("name",Value("/Synchronizer")).asString().c_str();
+        string portName=rf.check("name",Value("/syncEst")).asString().c_str();
 
         unsigned int NVel=rf.check("lenVel",Value(16)).asInt();
         unsigned int NAcc=rf.check("lenAcc",Value(25)).asInt();
@@ -283,6 +283,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    Synchronizer sync;
+    syncEst sync;
     return sync.runModule(rf);
 }

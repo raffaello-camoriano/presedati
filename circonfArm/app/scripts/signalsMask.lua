@@ -5,7 +5,7 @@
 --
 -- FUNCTIONALITIES:
 -- Selects only the signals corresponding to the first 4 DOFs of the arm coming from the icub/left_arm/state:o port
--- Subsamples with a given factor 's'. e.g. forwards 1 incoming sample each s samples and ignores the rest.
+-- Subsamples with a given factor 'periodFactor'. e.g. forwards 1 incoming sample each 'periodFactor' samples and ignores the rest.
  
 -- How to use the portMonitor
 
@@ -27,7 +27,7 @@
 require("yarp")
 
 -- Parameters
-periodFactor = 9
+periodFactor = 4
 i = 0
 
 PortMonitor.create = function()
